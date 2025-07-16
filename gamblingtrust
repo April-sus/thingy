@@ -11,10 +11,10 @@ local cuttingBoardTP = Vector3.new(67.34397888183594, 254.5, -666.7305)
 
 local playerGui = player:WaitForChild("PlayerGui")
 
--- State flags
+-- State
 local isInCooldown = false
 
--- Utilities
+-- Utility Functions
 local function getCharacter()
 	return player.Character or player.CharacterAdded:Wait()
 end
@@ -47,7 +47,7 @@ end
 
 local function fireMinigameRemote()
 	remote:FireServer("Finish")
-	print("Minigame remote fired!")
+	print("[Main] Minigame remote fired!")
 end
 
 local function isFruitGuiOpen()
@@ -55,23 +55,19 @@ local function isFruitGuiOpen()
 	return gui and gui.Enabled
 end
 
--- ✅ Background monitor for missing Apple tool
+-- ✅ Background Apple tool monitor
 task.spawn(function()
 	while true do
 		task.wait(1)
 		if not isInCooldown and not isFruitGuiOpen() and not hasAppleInBackpack() then
-			print("[Monitor] Apple tool missing. Teleporting to Apple TP...")
+			print("[Monitor] Apple tool missing. Going to Apple TP...")
 			teleportTo(appleTP)
+			repeat task.wait(2) until hasAppleInBackpack()
+			print("[Monitor] Apple found.")
 
-			repeat
-				task.wait(2)
-			until hasAppleInBackpack()
-
-			print("[Monitor] Apple tool found!")
-
-			-- After tool is found, teleport to cutting board if safe to do so
+			-- Only teleport to cutting board if safe
 			if not isInCooldown and not isFruitGuiOpen() and not isPlayerDead() then
-				print("[Monitor] Returning to cutting board...")
+				print("[Monitor] Going to cutting board.")
 				teleportTo(cuttingBoardTP)
 			end
 		end
@@ -80,42 +76,44 @@ end)
 
 -- ✅ Main loop
 while true do
-	-- Handle death
+	-- 🟥 Death check: teleport to Apple TP even if cooldown is active
 	if isPlayerDead() then
 		repeat task.wait(1) until not isPlayerDead()
-		print("[Main] Player respawned. Waiting for character...")
+		print("[Main] Player respawned.")
 		waitForCharacter()
+		teleportTo(appleTP)
 	end
 
-	-- Wait for Apple tool before starting
+	-- 🟨 Wait for cooldown if it's still running
+	while isInCooldown do
+		task.wait(1)
+	end
+
+	-- 🟩 Wait until player has Apple before going to cutting board
 	while not hasAppleInBackpack() do
-		print("[Main] Waiting for Apple tool before minigame...")
+		print("[Main] Waiting for Apple tool...")
 		teleportTo(appleTP)
 		task.wait(2)
 	end
 
-	-- Go to cutting board
+	-- ✅ Go to cutting board
 	teleportTo(cuttingBoardTP)
 
-	-- Wait for FruitMinigame GUI to open
+	-- ✅ Wait for FruitMinigame GUI to open
 	local gui
 	repeat
 		gui = playerGui:FindFirstChild("FruitMinigameGui")
-		if not gui then
-			task.wait(1)
-		end
+		if not gui then task.wait(1) end
 	until gui
 
-	repeat
-		task.wait(0.5)
-	until gui.Enabled
+	repeat task.wait(0.5) until gui.Enabled
 
-	-- Fire the remote to finish minigame
+	-- ✅ Fire remote to complete minigame
 	fireMinigameRemote()
 
-	-- Start cooldown
+	-- ✅ Start cooldown (no actions allowed during this)
 	isInCooldown = true
-	print("[Main] Cooldown started (30s)...")
+	print("[Main] Cooldown started...")
 	task.wait(cooldownTime)
 	isInCooldown = false
 	print("[Main] Cooldown ended.")
