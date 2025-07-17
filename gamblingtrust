@@ -39,13 +39,6 @@ local function isPlayerDead()
 	return not (char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0)
 end
 
-local function waitForCharacter()
-	player.CharacterAdded:Wait()
-	local char = player.Character
-	char:WaitForChild("Humanoid")
-	char:WaitForChild("HumanoidRootPart")
-end
-
 local function teleportTo(position)
 	local char = getCharacter()
 	local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -81,7 +74,6 @@ task.spawn(function()
 
 		if not hasApple then
 			if hadApple then
-				-- Just lost apple
 				hadApple = false
 			end
 			print("[Monitor] No Apple. Teleporting to Apple TP...")
@@ -104,11 +96,6 @@ task.spawn(function()
 		if tick() - lastProgressTime >= failsafeTimeout then
 			warn("[Failsafe] No progress in 35s. Forcing reset...")
 
-			if isPlayerDead() then
-				repeat task.wait(1) until not isPlayerDead()
-				waitForCharacter()
-			end
-
 			teleportTo(appleTP)
 
 			repeat task.wait(1) until hasAppleInBackpack() or isPlayerDead()
@@ -121,20 +108,8 @@ task.spawn(function()
 	end
 end)
 
--- ✅ Main loop
+-- ✅ Main loop (no respawn check anymore)
 while true do
-	if isPlayerDead() then
-		repeat task.wait(1) until not isPlayerDead()
-		waitForCharacter()
-		print("[Main] Respawn detected. Teleporting to Apple TP.")
-		teleportTo(appleTP)
-
-		while not hasAppleInBackpack() do
-			print("[Respawn] Waiting for Apple tool...")
-			task.wait(1)
-		end
-	end
-
 	while isInCooldown do task.wait(1) end
 
 	while not hasAppleInBackpack() do
