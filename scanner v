@@ -1,12 +1,10 @@
 local player = game:GetService("Players").LocalPlayer
-local RunService = game:GetService("RunService")
 local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 
 local RANGE = 15
-local modifiedPrompts = {}
 
--- Utility: Find the nearest BasePart ancestor (ProximityPrompts must be parented to one)
+-- Helper to find the BasePart that the prompt is attached to (even deep in models)
 local function getAttachedPart(prompt)
 	local obj = prompt.Parent
 	while obj and not obj:IsA("BasePart") do
@@ -15,26 +13,18 @@ local function getAttachedPart(prompt)
 	return obj
 end
 
--- Function to check and modify ProximityPrompts
-local function checkAndModifyPrompts()
-	for _, descendant in pairs(workspace:GetDescendants()) do
-		if descendant:IsA("ProximityPrompt") and not modifiedPrompts[descendant] then
-			local part = getAttachedPart(descendant)
-			if part then
-				local distance = (part.Position - hrp.Position).Magnitude
-				if distance <= RANGE then
-					descendant.KeyboardKeyCode = Enum.KeyCode.V
-					descendant.HoldDuration = 0
-					modifiedPrompts[descendant] = true
-				end
+-- Main one-time search and modify
+for _, descendant in ipairs(workspace:GetDescendants()) do
+	if descendant:IsA("ProximityPrompt") then
+		local part = getAttachedPart(descendant)
+		if part then
+			local distance = (part.Position - hrp.Position)
+			if distance.Magnitude <= RANGE then
+				descendant.KeyboardKeyCode = Enum.KeyCode.V
+				descendant.HoldDuration = 0
 			end
 		end
 	end
 end
 
--- Continuously run the check every frame
-RunService.RenderStepped:Connect(function()
-	pcall(checkAndModifyPrompts)
-end)
-
-print("ProximityPrompt modifier running (deep search, dynamic, within 15 studs).")
+print("Modified all nearby ProximityPrompts within 15 studs.")
