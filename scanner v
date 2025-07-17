@@ -1,0 +1,40 @@
+local player = game:GetService("Players").LocalPlayer
+local RunService = game:GetService("RunService")
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local RANGE = 15
+local modifiedPrompts = {}
+
+-- Utility: Find the nearest BasePart ancestor (ProximityPrompts must be parented to one)
+local function getAttachedPart(prompt)
+	local obj = prompt.Parent
+	while obj and not obj:IsA("BasePart") do
+		obj = obj.Parent
+	end
+	return obj
+end
+
+-- Function to check and modify ProximityPrompts
+local function checkAndModifyPrompts()
+	for _, descendant in pairs(workspace:GetDescendants()) do
+		if descendant:IsA("ProximityPrompt") and not modifiedPrompts[descendant] then
+			local part = getAttachedPart(descendant)
+			if part then
+				local distance = (part.Position - hrp.Position).Magnitude
+				if distance <= RANGE then
+					descendant.KeyboardKeyCode = Enum.KeyCode.V
+					descendant.HoldDuration = 0
+					modifiedPrompts[descendant] = true
+				end
+			end
+		end
+	end
+end
+
+-- Continuously run the check every frame
+RunService.RenderStepped:Connect(function()
+	pcall(checkAndModifyPrompts)
+end)
+
+print("ProximityPrompt modifier running (deep search, dynamic, within 15 studs).")
